@@ -1,0 +1,13 @@
+/*
+* all the version dependencies */
+
+ext {
+    revAwsSdk = '1.11.86'
+    revArchaius = '0.7.5'
+    revNetty='4.0.4.Final'
+    revGuice = '4.1.0'
+    revGuiceMultiBindings = '4.1.0'
+    revSlf4j = '1.7.25'
+    revSlf4jlog4j = '1.8.0-alpha1'
+    revSpectator = '0.68.0'
+}

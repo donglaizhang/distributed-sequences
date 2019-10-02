@@ -1,0 +1,61 @@
+apply plugin: "java"
+apply plugin: "eclipse"
+apply plugin: "idea"
+
+group = "com.donglai.seq"
+version = "1.0"
+
+repositories {
+    // Standard Maven
+    mavenCentral()
+}
+
+// Mimic Maven 'provided' configuration, as suggested in GRADLE-784
+configurations {
+    provided
+}
+sourceSets {
+    main {
+        compileClasspath += configurations.provided
+    }
+}
+
+apply from: "$rootDir/versionsOfDependencies.gradle"
+//ext.hadoopVersion = "2.0.0-mr1-cdh4.0.1"
+dependencies {
+//    provided "org.apache.hadoop:hadoop-client:${hadoopVersion}"
+
+
+
+    // Example of adding a specific compile time dependency
+    compile "com.google.guava:guava:11.0.2"
+
+
+    testCompile "junit:junit:4.8.2"
+    compile "com.google.inject:guice:${revGuice}"
+    compile "com.google.inject.extensions:guice-multibindings:${revGuiceMultiBindings}"
+    compile "com.amazonaws:aws-java-sdk-dynamodb:${revAwsSdk}"
+    compile "io.netty:netty-all:${revNetty}"
+
+
+}
+
+// Java version selection
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+eclipse {
+    classpath {
+        // Ensure Eclipse build output appears in build directory
+        defaultOutputDir = file("${buildDir}/eclipse-classes")
+        // Ensure the provided configuration jars are available in Eclipse
+        plusConfigurations += configurations.provided
+    }
+}
+
+// Emulate Maven shade plugin with a fat jar.
+// http://docs.codehaus.org/display/GRADLE/Cookbook#Cookbook-Creatingafatjar
+jar {
+    from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+}
+
