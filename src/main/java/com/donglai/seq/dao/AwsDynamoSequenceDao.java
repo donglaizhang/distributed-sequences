@@ -3,21 +3,35 @@ package com.donglai.seq.dao;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.*;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.donglai.seq.config.SeqConfiguration;
 import com.donglai.seq.core.SeqFormat;
 import com.donglai.seq.core.Sequence;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
-public class AWSDynamoSequenceDao implements SequenceDao{
+public class AwsDynamoSequenceDao implements SequenceDao{
     private final DynamoDB dynamoDB;
-    AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
-            .withRegion(Regions.US_EAST_1).build();
     private final String dynamoTable;
 
-    public AWSDynamoSequenceDao(DynamoDB dynamoDB, String dynamoTable) {
-        this.dynamoTable = dynamoTable;
+    public AwsDynamoSequenceDao() {
+        String awsRegion = SeqConfiguration.getSeqConfig().getAwsRegion();
+        Regions region = Regions.fromName(awsRegion);
+        AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
+                .withRegion(region).build();
+        this.dynamoTable = SeqConfiguration.getSeqConfig().getStorageName();
+        this.dynamoDB = new DynamoDB(client);
+    }
+
+    public AwsDynamoSequenceDao(String dynamoTable, AmazonDynamoDB client) {
+        this.dynamoTable = SeqConfiguration.getSeqConfig().getStorageName();
         this.dynamoDB = new DynamoDB(client);
     }
 
@@ -33,7 +47,6 @@ public class AWSDynamoSequenceDao implements SequenceDao{
 
     @Override
     public void addRange(String id, long start, long end) {
-
         Table table = dynamoDB.getTable(dynamoTable);
         PutItemSpec putspec = new PutItemSpec().withConditionExpression("");
         table.putItem(putspec);
@@ -43,6 +56,7 @@ public class AWSDynamoSequenceDao implements SequenceDao{
     @Override
     public void createSequence(Sequence seq) {
         Table table = dynamoDB.getTable(dynamoTable);
+        System.out.println(dynamoTable);
 
         int batchSize = seq.getBatchSize() > 0 ?seq.getBatchSize(): 1;
         Item item = new Item().withPrimaryKey("id", seq.getId())
@@ -50,9 +64,13 @@ public class AWSDynamoSequenceDao implements SequenceDao{
                 .with("current_block", 0)
                 .with("current_sequence", 0);
         if (seq.getRanges().length > 0) {
-            item = item.withList("ranges",seq.getRanges());
+            List<List<Long>> rangeList = new ArrayList<>();
+            for (int i = 0 ; i < seq.getRanges().length; i++) {
+                rangeList.add(Arrays.asList(seq.getRanges()[i][0], seq.getRanges()[i][1]));
+            }
+            item.withList("ranges",rangeList);
         }
-        PutItemSpec putspec = new PutItemSpec().withConditionExpression("").withItem(item);
+        PutItemSpec putspec = new PutItemSpec().withItem(item);
         table.putItem(putspec);
     }
 

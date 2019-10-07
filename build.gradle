@@ -8,6 +8,9 @@ version = "1.0"
 repositories {
     // Standard Maven
     mavenCentral()
+    maven { url "https://repository.mulesoft.org/nexus/content/repositories/public/" }
+
+
 }
 
 // Mimic Maven 'provided' configuration, as suggested in GRADLE-784
@@ -29,13 +32,20 @@ dependencies {
 
     // Example of adding a specific compile time dependency
     compile "com.google.guava:guava:11.0.2"
-
-
-    testCompile "junit:junit:4.8.2"
     compile "com.google.inject:guice:${revGuice}"
     compile "com.google.inject.extensions:guice-multibindings:${revGuiceMultiBindings}"
     compile "com.amazonaws:aws-java-sdk-dynamodb:${revAwsSdk}"
     compile "io.netty:netty-all:${revNetty}"
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+
+
+    testCompile "junit:junit:4.8.2"
+    testCompile "org.mockito:mockito-all:${revMockito}"
+    testCompile "com.amazonaws:DynamoDBLocal:${revDynamoDBLocal}"
+    testCompile "com.almworks.sqlite4java:sqlite4java:1.0.392"
+    testCompile "com.almworks.sqlite4java:libsqlite4java-osx:1.0.392"
+   // testCompile group: 'com.amazonaws', name: 'DynamoDBLocal', version: '1.11.477'
+
 
 
 }
@@ -58,4 +68,17 @@ eclipse {
 jar {
     from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
 }
+/* Copy the native files */
+task copyNativeDeps(type: Copy) {
+    from (configurations.compile+configurations.testCompile) {
+        include "*.dylib"
+    }
+    into 'build/libs'
+}
 
+/* Make sure we setup the tests to actually copy
+ * the native files and set the paths correctly. */
+test {
+    dependsOn copyNativeDeps
+    systemProperty "java.library.path", 'build/libs'
+}
